@@ -1,7 +1,7 @@
 import difflib
 
 def count_sloc(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf8") as file:
         lines = file.readlines()
 
     sloc_count = 0
@@ -37,28 +37,24 @@ def compare_php_files(file_path1, file_path2):
 
     lines_added = 0
     lines_removed = 0
-    lines_modified = 0
 
 
     for line in diff:
-        if line.startswith('? '):
-            if line.strip():
-                lines_modified += 1
-        elif line.startswith('+ '):
+        if line.startswith('+ '):
             lines_added += 1
         elif line.startswith('- '):
             lines_removed += 1
 
-    return lines_added, lines_removed, lines_modified
+    return lines_added, lines_removed
 
 if __name__ == "__main__":
     php_file_path1 = "cwslack-configs.php"
     php_file_path2 = "cwslack-configs-v2.php"
 
-    lines_added, lines_removed, lines_modified = compare_php_files(php_file_path1, php_file_path2)
+    lines_added, lines_removed = compare_php_files(php_file_path1, php_file_path2)
     sloc_diff = count_sloc(php_file_path2) - count_sloc(php_file_path1)
 
     print(f"Sloc Diff: {sloc_diff}")
     print(f"Lines added: {lines_added}")
     print(f"Lines removed: {lines_removed}")
-    print(f"Lines modified: {lines_modified}")
+    print(f"Lines changed: {lines_added+lines_removed}")

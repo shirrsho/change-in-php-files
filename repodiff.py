@@ -3,7 +3,7 @@ import difflib
 
 def compare_php_files(file_path1, file_path2):
 
-    with open(file_path1, 'r') as file1, open(file_path2, 'r') as file2:
+    with open(file_path1, 'r', encoding="utf-8") as file1, open(file_path2, 'r', encoding="utf-8") as file2:
         lines1 = file1.readlines()
         lines2 = file2.readlines()
 
@@ -12,52 +12,76 @@ def compare_php_files(file_path1, file_path2):
 
     lines_added = 0
     lines_removed = 0
-    lines_modified = 0
 
 
     for line in diff:
-        if line.startswith('? '):
-            if line.strip():
-                lines_modified += 1
-        elif line.startswith('+ '):
+        if line.startswith('+ '):
             lines_added += 1
         elif line.startswith('- '):
             lines_removed += 1
 
-    return lines_added, lines_removed, lines_modified
+    return { 'added':lines_added, 'removed':lines_removed }
 
-def find_added_removed_lines(folder1, folder2):
-    added_lines = {}
-    removed_lines = {}
+def find_matching_files(folder1, folder2):
+    matching_files = []
+    changed = []
 
-    for root, _, files in os.walk(folder1):
-        for file in files:
-            if file.endswith(".php"):
-                file_path1 = os.path.join(root, file)
-                relative_path = os.path.relpath(file_path1, folder1)
-                file_path2 = os.path.join(folder2, relative_path)
-
-                if os.path.exists(file_path2):
-                    lines_added, lines_removed, added_line_numbers = compare_php_files(file_path1, file_path2)
-                    if lines_added > 0:
-                        added_lines[relative_path] = added_line_numbers
-                    if lines_removed > 0:
-                        removed_lines[relative_path] = lines_removed
-
-    return added_lines, removed_lines
+    for root1, _, files1 in os.walk(folder1):
+        for root2, _, files2 in os.walk(folder2):
+            for file1 in files1:
+                if file1 in files2:
+                    if str(os.path.join(root1,file1)).replace("folder1", "") != str(os.path.join(root2,file1)).replace("folder2", ""):
+                        continue
+                    # matching_files.append(os.path.join(root1, file1))
+                    # matching_files.append(os.path.join(root2, file1))
+                    if not str(file1).endswith('.php'):
+                        continue
+                    # print(os.path.join(root2,file1))
+                    changes = compare_php_files(os.path.join(root1,file1),os.path.join(root2, file1))
+                    if changes['added'] == 0 and changes['removed'] == 0:
+                        continue
+                    changes['file'] = os.path.join(root1,file1)
+                    changes['changed'] = changes['added'] + changes['removed']
+                    changed.append(changes)
+                    # print(changes['file'],'{')
+                    # print('\tadded: ',changes['added'])
+                    # print('\tremoved: ',changes['removed'])
+                    # print('\tchanged: ',changes['changed'])
+                    # print('}')
+    
+    return changed
 
 if __name__ == "__main__":
-    folder1_path = "folder1"
-    folder2_path = "folder2"
+    folder1 = "folder1"
+    folder2 = "folder2"
 
-    added_lines, removed_lines = find_added_removed_lines(folder1_path, folder2_path)
+    changed = find_matching_files(folder1, folder2)
+    total = {
+        'added':0,
+        'removed':0,
+        'changed':0
+    }
 
-    print("Added lines:")
-    for file_path, lines_added in added_lines.items():
-        print(f"File: {file_path}")
-        for line_number, line_content in lines_added.items():
-            print(f"Line {line_number}: {line_content.strip()}")
-
-    print("\nRemoved lines:")
-    for file_path, lines_removed in removed_lines.items():
-        print(f"File: {file_path}, Removed lines: {lines_removed}")
+    if changed:
+        print("Changes:")
+        for change in changed:
+            print(change['file'],'{')
+            print('\tadded: ',change['added'])
+            print('\tremoved: ',change['removed'])
+            print('\tchanged: ',change['changed'])
+            print('}')
+            total = {
+                'added':total['added']+change['added'],
+                'removed':total['removed']+change['removed'],
+                'changed':total['changed']+change['changed'],
+            }
+        print('Total changes: ')
+        print('{')
+        print('\tadded: ',total['added'])
+        print('\tremoved: ',total['removed'])
+        print('\tchanged: ',total['changed'])
+        print('}')
+    else:
+        print("No changes in files found.")
+        
+    
